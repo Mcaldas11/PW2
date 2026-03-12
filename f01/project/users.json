@@ -1,24 +1,5 @@
 {
   "users": [
-    {
-      "id": 2,
-      "name": "Gabriel",
-      "email": "gabriel@gmail.com"
-    },
-    {
-      "id": 3,
-      "name": "Miguel",
-      "email": "miguel@gmail.com"
-    },
-    {
-      "id": 4,
-      "name": "gabriel",
-      "email": "gabriel.gmail.pt"
-    },
-    {
-      "id": 5,
-      "name": "Ana",
-      "email": "ana.@mail.pt"
-    }
+    
   ]
 }
