@@ -2,11 +2,16 @@
 
 const fs = require('fs');
 const filePath = './users.json';
+const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const userService = {
     createUser: (name, email) => {
         if (!name || !email) {
             console.log('USAGE: node app.js create <name> <email>');
+            return;
+        }
+        if (!emailRe.test(email)) {
+            console.log('ERROR: invalid email format.');
             return;
         }
         let data = { users: [] };
@@ -34,7 +39,7 @@ const userService = {
             process.exit(1);
         }
 
-        console.log('User created');
+        console.log(`User created (id: ${nextId})`);
     },
 
     getUsers: () => {
@@ -77,7 +82,8 @@ const userService = {
         if (!Number.isNaN(numeric)) index = data.users.findIndex(u => u.id === numeric);
         if (index === -1) index = data.users.findIndex(u => u.email === id);
         if (index === -1) {
-            console.log('User not found');
+            if (!Number.isNaN(numeric)) console.log(`Error: User with id ${numeric} not found`);
+            else console.log(`Error: User with email ${id} not found`);
             return;
         }
 
@@ -103,6 +109,10 @@ const userService = {
             console.log('ERROR: id must be a number.');
             return;
         }
+        if (!emailRe.test(email)) {
+            console.log('ERROR: invalid email format.');
+            return;
+        }
 
         let data = { users: [] };
         try {
@@ -119,7 +129,7 @@ const userService = {
 
         const user = data.users.find(u => u.id === numericId);
         if (!user) {
-            console.log(`User with id ${numericId} not found.`);
+            console.log(`Error: User with id ${numericId} not found`);
             return;
         }
 
