@@ -3,11 +3,6 @@ const http = require('http');
 
 const PORT = process.env.PORT || 3000;
 
-/* const server = http.createServer((req, res) => {
-    res.writeHead(200, {'content-Type': 'text/plain'});
-    res.end('<h1>TSIW>h1>');
-}); */
-
 const server = http.createServer((req, res) => {
     const{method, url} = req;
     console.log(`Received ${method} request for ${url}`);
