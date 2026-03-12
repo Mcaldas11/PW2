@@ -54,9 +54,9 @@ const userService = {
         }
     },
 
-    deleteUser: (identifier) => {
-        if (!identifier) {
-            console.log('USAGE: node app.js delete <id|email>');
+    deleteUser: (id) => {
+        if (!id) {
+            console.log('USAGE: node app.js delete <id>');
             return;
         }
         let data = { users: [] };
@@ -72,10 +72,10 @@ const userService = {
             process.exit(1);
         }
 
-        const numeric = Number(identifier);
+        const numeric = Number(id);
         let index = -1;
         if (!Number.isNaN(numeric)) index = data.users.findIndex(u => u.id === numeric);
-        if (index === -1) index = data.users.findIndex(u => u.email === identifier);
+        if (index === -1) index = data.users.findIndex(u => u.email === id);
         if (index === -1) {
             console.log('User not found');
             return;
