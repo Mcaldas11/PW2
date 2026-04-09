@@ -11,7 +11,7 @@ export const getAllProducts = (req, res) => {
 
     if (name) {
         const nameLower = name.toLowerCase();
-        result = result.filter(p => p.name.includes(nameLower));
+        result = result.filter(p => p.name.toLowerCase().includes(nameLower));
     }
     if (sort) {
         if (sort === 'price|asc')
