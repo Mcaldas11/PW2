@@ -99,4 +99,4 @@ try {
   console.log(`${updatedCount} products updated.`);
 } catch (error) {
   console.error("Error updating products:", error);
-}
+} 
