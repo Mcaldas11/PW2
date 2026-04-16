@@ -1,91 +1,119 @@
 // import products data
-import { products } from '../models/products.model.js';
+import { Product } from '../models/db.config.js';
+import { Op } from 'sequelize';
 
  // controller to get all products
-export const getAllProducts = (req, res) => {
-    res.json(products);
+export const getAllProducts = async (req, res, next) => {
+    try {
+        // const products = await Product.findAll();
+        // return res.json(products);
+
+        // optional query parameters: name and sort : price|asc or ptice|desc
+        const { name, sort } = req.query;
+        
+        if ( sort && !['price|asc', 'price|desc'].includes(sort)) {
+            const err = new Error('Validation failed');
+            err.status = 400;
+            err.errors = {sort: 'Sort must be price|asc or price|desc'}
+            return next(err);
+        }
+
+        const where = name ? { name: {[Op.like]: `%${name}%`} } : {};
+
+        const order = sort ? [['price', sort.split('|')[1].toUpperCase()]] : [];
+
+        const products = await Product.findAll({ where, order });
+        return res.json(products);
+
+    } catch (error) {
+        const err = new Error('Database error');
+        err.status = 500;
+        return next(err);
+    }
 };
 
 // controller to get a product by id
-export const getProductById = (req, res) => {
-    const { id } = req.params;
-    // find product by id
-    const product = products.find(p => p.id === Number(id));  
-    // if product not found, send to error handling middleware
-    if (!product) {
-        //return res.status(404).json({ message: 'Product not found' });
-        const error = new Error(`Product with id ${id} not found`);
-        error.status = 404;
-        throw error;
+export const getProductById = async (req, res, next) => {
+    try {
+        const {id} = req.params;
+        const product = await Product.findByPk(id);
+        if (!product) {
+            const err = new Error('Product not found');
+            err.status = 404;
+            return next(err);
+        }
+        return res.json(product);
+    } catch (error) {
+        const err = new Error('Database error');
+        err.status = 500;
+        return next(err);
     }
-    res.json(product);
+    
 };
 
 // controller to create a new product
-export const createProduct = (req, res) => {
-    const { name, price, stock } = req.body;
-
-    // calculate new ID
-    const nextId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
-    
-    // create new product object
-    const newProduct = {
-        id: nextId,
-        name,price, 
-        // stock is optional
-        stock: stock? stock: 0
-    };  
-    // add new product to products array
-    products.push(newProduct);
-
-    // send response with new product
-    res.status(201).json(newProduct);
-};
+export const createProduct = async (req, res, next) => {
+    console.log(req.body);
+    try {
+        console.log("helloooooo") ;
+        const newProduct = await Product.create(req.body);
+        console.log(newProduct);
+        return res.status(201).json(newProduct);
+    } catch (error) {
+        if (error.name === 'SequelizeValidationError') {
+            const validationErrors = error.errors.map(e => e.message);
+            const err = new Error('Validation error');
+            err.status = 400;
+            err.errors = validationErrors;
+            return next(err);
+        } else {
+            const err = new Error('Database error');
+            err.status = 500;
+            return next(err);
+        }
+}};
 
 // controller to update a product by id
-export const updateProduct = (req, res) => {
-        const { id } = req.params;
-        const { name, price, stock } = req.body;
-
-        // find product by id
-        const productIndex = products.findIndex(
-            p => p.id === Number(id));  
-        // if product not found, send to error handling middleware
-        if (productIndex === -1) {
-            const error = new Error(`Product with id ${id} not found`);
-            error.status = 404;
-            throw error;
+export const updateProduct = async (req, res, next) => {
+    try {
+        const {id} = req.params;
+        const product = await Product.findByPk(id);
+        if (!product) {
+            const err = new Error('Product not found');
+            err.status = 404;
+            return next(err);
         }
-
-        // update product
-        const updatedProduct = {
-            id: productIndex,
-            name, price,
-            stock: stock? stock: products[productIndex].stock
-        };
-        // update product in products array
-        products[productIndex] = updatedProduct;
-
-        // send response with updated product
-        res.json(updatedProduct);
+        await product.update(req.body);
+        return res.json(product);
+    } catch (error) {
+        if (error.name === 'SequelizeValidationError') {
+            const validationErrors = error.errors.map(e => e.message);
+            const err = new Error('Validation error');
+            err.status = 400;
+            err.errors = validationErrors;
+            return next(err);
+        } else {
+            const err = new Error('Database error');
+            err.status = 500;
+            return next(err);
+        }
+    }    
 };
 
-export const deleteProduct = (req, res) => {
-     const { id } = req.params;
-
-    // find product by id
-    const productIndex = products.findIndex(p => p.id === Number(id));
-    
-    // if product not found, send to error handling middleware
-    if (productIndex === -1) {
-        const error = new Error(`Product with id ${id} not found`);
-        error.status = 404;
-        throw error;
+export const deleteProduct = async(req, res, next) => {
+    try {
+        const {id} = req.params;
+        const product = await Product.findByPk(id);
+        if (!product) {
+            const err = new Error('Product not found');
+            err.status = 404;
+            return next(err);
+        }
+        await product.destroy();
+        res.status(204).send();
+    } catch (error) {
+        const err = new Error('Database error');
+        err.status = 500;
+        return next(err);
     }
-
-    // remove product from products array
-    products.splice(productIndex, 1);
-
-    // send no content response
-    res.status(204).send();
 };

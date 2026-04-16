@@ -1,22 +1,30 @@
-﻿export const products = [
-  { id: 1, name: "Classic White T-Shirt", price: 12.99, stock: 34 },
-  { id: 2, name: "Blue Denim Jeans", price: 45.5, stock: 18 },
-  { id: 3, name: "Leather Wallet", price: 29.99, stock: 22 },
-  { id: 4, name: "Running Sneakers", price: 69.95, stock: 12 },
-  { id: 5, name: "Stainless Steel Water Bottle", price: 18.75, stock: 40 },
-  { id: 6, name: "Wireless Earbuds", price: 79.99, stock: 15 },
-  { id: 7, name: "Canvas Backpack", price: 39.5, stock: 27 },
-  { id: 8, name: "Desk Lamp", price: 24.2, stock: 31 },
-  { id: 9, name: "Ceramic Coffee Mug", price: 11.0, stock: 48 },
-  { id: 10, name: "Portable Phone Charger", price: 25.99, stock: 20 },
-  { id: 11, name: "Notebook Journal", price: 14.5, stock: 36 },
-  { id: 12, name: "Bluetooth Speaker", price: 54.9, stock: 13 },
-  { id: 13, name: "Cotton Face Mask", price: 6.5, stock: 60 },
-  { id: 14, name: "Scented Candle", price: 16.0, stock: 19 },
-  { id: 15, name: "Travel Pillow", price: 22.95, stock: 25 },
-  { id: 16, name: "Ceramic Plant Pot", price: 19.8, stock: 14 },
-  { id: 17, name: "Digital Alarm Clock", price: 31.2, stock: 10 },
-  { id: 18, name: "Kitchen Knife Set", price: 58.0, stock: 8 },
-  { id: 19, name: "Yoga Mat", price: 27.75, stock: 17 },
-  { id: 20, name: "Soft Knit Beanie", price: 13.99, stock: 29 }
-];
+﻿// using ES modules sytax, export a function that defines the products model using sequelize
+// products: id(integer, primary key, auto increment), name(string), price(float), stock(integer)
+
+export default (sequelize, DataTypes) =>  sequelize.define('Product', {
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  price: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
+    validate : {
+      isFloat: true,
+      isPositive(value) {
+        if (value <= 0) {
+          throw new Error('Price must be greater than 0');
+        }
+      }
+    }
+  },
+  stock: {
+    type: DataTypes.INTEGER, defaultValue: 0,
+    validate : {
+      isInt: true,
+      min: 0
+    }
+  }
+},{
+  timestamps: false
+});
