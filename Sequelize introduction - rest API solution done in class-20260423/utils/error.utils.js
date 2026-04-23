@@ -59,3 +59,10 @@ export const genericError = (message = "Internal Server Error") => {
     return err;
 };
 
+export const conflictError = (errors) => {
+    const err = new Error("Conflict found");
+    err.status = 409;
+    err.errors = errors;
+    return err;
+};
+

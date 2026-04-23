@@ -25,6 +25,21 @@ try {
 import ProductModel from "./products.model.js";
 const Product = ProductModel(sequelize, DataTypes);
 
+import CartModel from "./carts.model.js";
+const Cart = CartModel(sequelize, DataTypes);
+
+import CartItemModel from "./cartitems.model.js";
+const CartItem = CartItemModel(sequelize, DataTypes);
+
+//add relations here
+// eg N:M
+
+Product.belongsToMany(Cart, { through: CartItem,foreignKey: "idItem" , onDelete : "RESTRICT" });
+Cart.belongsToMany(Product, { through: CartItem });
+
+
+
+
 // Sync the models with the database
 try {
     await sequelize.sync({ alter: true }); // use { force: true } to drop and recreate tables on every sync (use with caution in production)
@@ -35,4 +50,4 @@ try {
 }   
 
 // export the models for use in other modules
-export { Product };
+export { Product, Cart, CartItem };
