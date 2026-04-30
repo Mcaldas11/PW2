@@ -1,9 +1,5 @@
 // import sequelize models
 import { Product } from "../models/db.config.js";
-
-// import Sequelize operators, for like queries in getAllProducts
-import { Op } from 'sequelize';
-
 // import error utils
 import { conflictError, validationError, sequelizeValidationError, missingFieldsValidationError, notFoundError, genericError } from "../utils/error.utils.js";
 // import * as errorUtils from "../utils/error.utils.js";  
@@ -112,43 +108,28 @@ export const createProduct = async (req, res, next) => {
 // controller to update a product by id
 export const updateProduct = async (req, res, next) => {
     try {
-        // sequelize update method allows PARTIAL updates, 
-        // so we NEED to check for missing fields (since it is a PUT endpoint, not PATCH) 
-        // and send an error if any required field is missing in the request body
-        let missingFields = [];
-        if (!req.body.name) missingFields.push("Name");
-        if (!req.body.price) missingFields.push("Price");
-
-        // if there are missing fields, send a validation error
-        if (missingFields.length > 0) {
-            return next(missingFieldsValidationError(missingFields));
-        }
-
-        // find product by id, then update it
-        // sequelize UPDATE method DOES NOT return the updated product, 
-        // so we need to always find the product first, then update it, 
-        // to be able to return the updated product in the response
         const { id } = req.params;
-        // find product by id
-        const product = await Product.findByPk(id);
-        // if product not found, send to error handling middleware
-        if (!product) {
-            return next(notFoundError("product", id));
+        const { name, price, stock } = req.body;
+
+        const updateProduct = await Product.findByIdAndUpdate(id,
+            { name, price, stock },
+            {
+                runValidators: true, // to run the validators defined in the model
+                returnDocument: "after" // to return the updated document
+            }).select("-__v"); // exclude __v field from the response
+
+        if (!updateProduct) {
+            return next(errorUtils.notFoundError("product", id));
         }
+            res.json(updateProduct);
+        } catch (error) {
+            if (error.name === "CastError") 
+                return next(errorUtils.mongooseCastError(error));
 
-        // update product in DB with new data from request body
-        await product.update(req.body);
-
-        // send response with updated product
-        res.json(product);
-
-    } catch (error) {
-        // detect specific validation errors and send appropriate response
-        if (error.name === "SequelizeValidationError") {
-            return next(sequelizeValidationError(error.errors));
-        }
-        // or send generic error 
-        next(genericError("Error updating product"));
+            if (error.name === "ValidationError") 
+                return next(errorUtils.mongooseValidationError(error.errors));
+        
+            next(genericError("Error updating product"));
     }
 };
 

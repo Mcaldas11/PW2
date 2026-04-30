@@ -10,13 +10,13 @@ try {
   process.exit(1); // exit the process with failure
 }
 
-import Product from "./products.model.js";
+import ProductModel from "./products.model.js";
 const Product = ProductModel(mongoose);
 
-import Cart from "./carts.model.js";
+import CartModel from "./carts.model.js";
 const Cart = CartModel(mongoose);
 
-import Order from "./orders.model.js";
+import OrderModel from "./orders.model.js";
 const Order = OrderModel(mongoose);
 
 // export the models for use in other modules
