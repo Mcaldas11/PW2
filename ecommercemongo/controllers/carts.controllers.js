@@ -1,100 +1,162 @@
-// import necessary models
-import { Cart, Product } from "../models/db.config.js";
-// import error utils
+import mongoose from "mongoose";
+
+import { Cart, Product, Order } from "../models/db.config.js";
 import * as errorUtils from "../utils/error.utils.js";
 
-// controller to create a new cart
 export const create = async (req, res, next) => {
-    try {
-        const cart = await Cart.create();
-        // add hateoas links to the response
-        const cartResponse = {
-            ...cart.toJSON(),
-            links: {
-                addItems: { href: `/carts/${cart.id}/items`, method: "POST" }
-            }
-        };
-        res.status(201).json(cartResponse);
-    } catch (error) {
-        next(errorUtils.genericError("Error creating cart"));
-    }
+  try {
+    const cart = await Cart.create({});
+    const cartResponse = {
+      ...cart.toJSON(),
+      links: {
+        addItems: { href: `/carts/${cart.id}/items`, method: "POST" },
+      },
+    };
+    res.status(201).json(cartResponse);
+  } catch (error) {
+    next(errorUtils.genericError("Error creating cart"));
+  }
 };
 
 export const addItem = async (req, res, next) => {
-    try {
-        const { cartId } = req.params;
-        const { productId, quantity } = req.body;
+  try {
+    const { cartId } = req.params;
+    const { productId, quantity } = req.body;
 
-        // sequelize validations on junction tables are a bit tricky, 
-        // so we will do some manual validations
-        // 1. validate request: mandatory fields and that quantity is a positive integer
-        let cart_item_errors = [];
-        if (!productId) cart_item_errors.push("Field productId is required");
-        // because quantity is a number (and 0 is a falsy value), 
-        // we need to check for undefined instead of just falsy value
-        if (quantity === undefined) cart_item_errors.push("Field quantity is required");
-        if (!Number.isInteger(quantity))
-            cart_item_errors.push("Quantity must be an integer");
-        if (quantity <= 0)
-            cart_item_errors.push("Quantity must be greater than 0");
-        // send all validation errors at once if there are any
-        if (cart_item_errors.length > 0)
-            return next(validationError({ "cart_item": cart_item_errors }));
+    const cart_item_errors = [];
+    if (!productId) cart_item_errors.push("Field productId is required");
+    if (quantity === undefined)
+      cart_item_errors.push("Field quantity is required");
+    if (!Number.isInteger(quantity))
+      cart_item_errors.push("Quantity must be an integer");
+    if (quantity <= 0) cart_item_errors.push("Quantity must be greater than 0");
+    if (cart_item_errors.length > 0) {
+      return next(errorUtils.validationError({ cart_item: cart_item_errors }));
+    }
 
-        // 2. check if cart exits
-        const cart = await Cart.findByPk(cartId);
-        if (!cart)
-            return next(errorUtils.notFoundError("cart", cartId));
+    if (!mongoose.Types.ObjectId.isValid(cartId)) {
+      return next(errorUtils.notFoundError("cart", cartId));
+    }
 
-        // 3. check if product exists
-        const product = await Product.findByPk(productId);
-        if (!product)
-            return next(errorUtils.notFoundError("product", productId));
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return next(errorUtils.notFoundError("product", productId));
+    }
 
-        // 4. check product stock
-        if (product.stock < quantity) 
-            return next(errorUtils.conflictError({
-                stock: `Not enough stock for product ${productId}.`
-            }));
+    const cart = await Cart.findById(cartId);
+    if (!cart) return next(errorUtils.notFoundError("cart", cartId));
 
-        // 5. check if cart already has the product
-        const hasProductInCart = await cart.hasProduct(product);
-        if (hasProductInCart) 
-            return next(errorUtils.conflictError(`Product ${productId} is already in cart ${cartId}.`));
+    const product = await Product.findById(productId);
+    if (!product) return next(errorUtils.notFoundError("product", productId));
 
-        // FINALLY: add the product to the cart with the specified quantity
-        await cart.addProduct(product, { through: { quantity } });
+    if (product.stock < quantity) {
+      return next(
+        errorUtils.conflictError({
+          stock: `Not enough stock for product ${productId}.`,
+        }),
+      );
+    }
 
-        // UPDATE the product stock by subtracting the quantity added to the cart
-        product.stock -= quantity;
-        await product.save();
+    const hasProductInCart = cart.items.some(
+      (item) => item.productId.toString() === productId,
+    );
+    if (hasProductInCart) {
+      return next(
+        errorUtils.conflictError(
+          `Product ${productId} is already in cart ${cartId}.`,
+        ),
+      );
+    }
 
-        // return the updated cart with the products in it
-        // const updatedCart = await Cart.findByPk(cartId, {
-        //     include: {
-        //         model: Product,
-        //         through: { attributes: ['quantity'] }
-        //     }
-        // });
-        let cartItems = await cart.getProducts();
-        // include cart details (like all items in the cart with their quantities) in the response
-        const updatedCart = {
-            ...cart.toJSON(),
-            items: cartItems.map(item => ({
-                id: item.id,
-                name: item.name,
-                quantity: item.cart_item.quantity,
-                // add HATEOAS links to the cart items
-                links: {
-                    product: `/products/${item.id}`,
-                    updateQuantity: `/carts/${cartId}/items/${item.id}`,
-                    removeItem: `/carts/${cartId}/items/${item.id}`
-                }
-            }))
-        };
+    cart.items.push({ productId, quantity });
+    await cart.save();
 
-        res.status(200).json(updatedCart);
-    } catch (error) {
-        next(errorUtils.genericError("Error adding item to cart"));
+    product.stock -= quantity;
+    await product.save();
+
+    const updatedCartDocument =
+      await Cart.findById(cartId).populate("items.productId");
+    const updatedCart = {
+      ...updatedCartDocument.toJSON(),
+      items: updatedCartDocument.items.map((item) => ({
+        id: item.productId.id,
+        name: item.productId.name,
+        price: item.productId.price,
+        quantity: item.quantity,
+        links: {
+          product: `/products/${item.productId.id}`,
+          updateQuantity: `/carts/${cartId}/items/${item.productId.id}`,
+          removeItem: `/carts/${cartId}/items/${item.productId.id}`,
+        },
+      })),
+    };
+
+    res.status(200).json(updatedCart);
+  } catch (error) {
+    next(errorUtils.genericError("Error adding item to cart"));
+  }
+};
+
+export const checkout = async (req, res, next) => {
+  try {
+    const { cartId } = req.params;
+
+    const cart = await Cart.findById(cartId).populate("items.productId");
+    if (!cart) return next(errorUtils.notFoundError("cart", cartId));
+
+    // check if cart is empty and return 400 if it is
+    if (cart.items.length === 0) {
+      return next(errorUtils.validationError({ cart: "Cart is empty" }));
+    }
+
+    const outOfStockProducts = cart.items.filter(
+      (item) => item.productId.stock < item.quantity,
+    );
+    if (outOfStockProducts.length > 0) {
+      return next(
+        errorUtils.conflictError({
+          stock: `Not enough stock for products: ${outOfStockProducts.map((item) => item.productId.id).join(", ")}.`,
+        }),
+      );
+    }
+
+    // if all products have enough stock, we proceed to checkout
+    // we update the stock of each product and save the cart with an empty items array
+    for (const item of cart.items) {
+      const product = await Product.findById(item.productId.id);
+      product.stock -= item.quantity;
+      await product.save();
+    }
+    // build order items and total price
+    const orderItems = cart.items.map((item) => ({
+      productId: item.productId.id || item.productId._id,
+      name: item.productId.name,
+      priceAtPurchase: item.productId.price,
+      quantity: item.quantity,
+    }));
+
+    const totalPrice = orderItems.reduce(
+      (sum, it) => sum + it.priceAtPurchase * it.quantity,
+      0,
+    );
+
+    // create order
+    const newOrder = await Order.create({ items: orderItems, totalPrice });
+
+    // clear cart
+    cart.items = [];
+    await cart.save();
+
+    res.status(201).json({
+        orderId : orderItems._id,
+        links: {
+            order: `/orders/${newOrder._id}`,
+        }
+    });
+  } catch (error) {
+    if (error.name === "ValidationError") {
+      return next(errorUtils.mongooseValidationError(error.errors));
+    }
+    next(errorUtils.genericError("Error during checkout"));
+
     }
 };
