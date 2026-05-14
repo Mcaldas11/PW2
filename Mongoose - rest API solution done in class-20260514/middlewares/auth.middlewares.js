@@ -30,3 +30,17 @@ export const verifyToken = (req, res, next) => {
     }
   }
 };
+
+export const requireAdmin = (req, res, next) => {
+  if (req.user.role !== "admin") {
+    return next(errorUtils.forbiddenError("Admin access required"));
+  }
+  next();
+};
+
+export const requireRegularUser = (req, res, next) => {
+  if (req.user.role !== "regular") {
+    return next(errorUtils.forbiddenError("Regular user access required"));
+  }
+    next();
+};
