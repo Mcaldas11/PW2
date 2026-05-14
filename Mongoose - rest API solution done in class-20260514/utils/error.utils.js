@@ -68,3 +68,14 @@ export const conflictError = (message) => {
     return err; 
 };
 
+export const unauthorizedError = (message) => {
+    const err = new Error(message);
+    err.status = 401;
+    return err;
+};
+
+export const forbiddenError = (message) => {
+    const err = new Error(message);
+    err.status = 403;
+    return err;
+};

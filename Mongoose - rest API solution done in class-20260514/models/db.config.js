@@ -20,5 +20,8 @@ const Cart = CartModel(mongoose);
 import OrderModel from "./orders.model.js";
 const Order = OrderModel(mongoose);
 
+import UserModel from "./users.model.js";
+const User = UserModel(mongoose);
+
 // export the models for use in other modules
-export { Product, Cart, Order };
+export { Product, Cart, Order, User };

@@ -11,6 +11,10 @@ app.use(express.json());
 // import express router for carts & products resources
 import productsRoutes from './routes/products.routes.js';
 import cartsRoutes from './routes/carts.routes.js';
+import usersRoutes from './routes/users.routes.js';
+
+// apply express router for /users routes
+app.use('/users', usersRoutes);
 
 // apply express router for /carts routes
 app.use('/carts', cartsRoutes);
